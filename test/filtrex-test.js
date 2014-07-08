@@ -7,6 +7,7 @@ describe('filtrex', function() {
         expect(compileExpression('2 * 3 + 1')()).to.equal(7);
         expect(compileExpression('1 + (2 * 3)')()).to.equal(7);
         expect(compileExpression('(1 + 2) * 3')()).to.equal(9);
+        expect(compileExpression('(4 * 5) / 2')()).to.equal(10);
         expect(compileExpression('((1 + 2) * 3 / 2 + 1 - 4 + (2 ^ 3)) * -2')()).to.equal(-19);
         expect(compileExpression('1.4 * 1.1')()).to.equal(1.54);
         expect(compileExpression('97 % 10')()).to.equal(7);
@@ -56,6 +57,9 @@ describe('filtrex', function() {
         expect(compileExpression('foo[bar][baz]')(vars)).to.equal(10);
         expect(compileExpression('foo.things[2]')(vars)).to.equal('three');
         expect(compileExpression('foo.things.length')(vars)).to.equal(3);
+        expect(compileExpression('foo[bar][baz] > 5')(vars)).to.equal(1);
+        expect(compileExpression('foo.things has "one"')(vars)).to.be.true;
+        expect(compileExpression('not foo.things has "one"')(vars)).to.equal(0);
         expect(compileExpression('foo.fn(foo)').bind(null, vars)).to.throw;
     });
     
@@ -128,6 +132,30 @@ describe('filtrex', function() {
         expect(compileExpression('foo not in ("aa", "bb")')({foo:'cc'})).to.equal(true);
     });
 
+    it('evaluates has expressions', function() {
+        var vars = { foo: { bar: 'baz' }, value: 'two', things: ['one', 'two', 'three'] };
+        expect(compileExpression('things has "one"')(vars)).to.be.true;
+        expect(compileExpression('foo has "bar"')(vars)).to.be.true;
+        expect(compileExpression('not things has "one"')(vars)).to.equal(0);
+        expect(compileExpression('things has "four"')(vars)).to.be.false;
+        expect(compileExpression('not things has "four"')(vars)).to.equal(1);
+        expect(compileExpression('things has value')(vars)).to.be.true;
+        expect(compileExpression('"two" in ("one", value)')(vars)).to.be.true;
+    });
+    
+    it('evaluates basic regexp match expressions', function() {
+        expect(compileExpression('"xyz" match /z$/')()).to.be.true;
+        expect(compileExpression('"xyz" ~ /^x/')()).to.be.true;
+        expect(compileExpression('"xyz" match /y$/')()).to.be.false;
+        expect(compileExpression('123 match /^[0-9]+/')()).to.be.true;
+        expect(compileExpression('"abc" match /^[0-9]+/')()).to.be.false;
+        expect(compileExpression('foo match /^bar/')({foo:'barz'})).to.be.true;
+        expect(compileExpression('foo ~ /^bar/')({foo:'barz'})).to.be.true;
+        expect(compileExpression('foo match /^bar/i')({foo:'BARZ'})).to.be.true;
+        expect(compileExpression('not "xyz" match /y$/')()).to.equal(1);
+        expect(compileExpression('("/path/to/file" match /^\\/path\\/to\\/f/) or ("xyz" ~ /^x/)')()).to.equal(1);
+    });
+
     it('evaluates a ? b : c', function() {
         expect(compileExpression('1 > 2 ? 3 : 4')()).to.equal(4);
         expect(compileExpression('1 < 2 ? 3 : 4')()).to.equal(3);
@@ -148,4 +176,9 @@ describe('filtrex', function() {
         function triple(x) { return x * 3; };
         expect(compileExpression('triple(v)', {triple:triple})({v:7})).to.equal(21);
     });
+    
+    it('returns the raw function source', function() {
+        expect(compileExpression('1 + 1', {}, true)).to.be.a.string;
+    });
+    
 });

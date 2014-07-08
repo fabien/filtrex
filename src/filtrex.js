@@ -8,7 +8,7 @@
  *
  * -Joe Walnes
  */
-module.exports = function compileExpression(expression, extraFunctions /* optional */) {
+module.exports = function compileExpression(expression, extraFunctions /* optional */, source /* optional */) {
     
     var get = function(o, s) {
         if (typeof o !== 'object') return o;
@@ -32,7 +32,17 @@ module.exports = function compileExpression(expression, extraFunctions /* option
         }
         return o;
     };
-
+    
+    var has = function(o, v) {
+        if (Object.prototype.toString.call(o) === '[object Array]') {
+            return o.indexOf(v) > -1;
+        } else if (typeof o === 'object') {
+            return o.hasOwnProperty(v);
+        } else {
+            return false;
+        }
+    };
+    
     var parser = require('./parser');
 
     var functions = {
@@ -45,7 +55,8 @@ module.exports = function compileExpression(expression, extraFunctions /* option
         random: Math.random,
         round: Math.round,
         sqrt: Math.sqrt,
-        get: get
+        get: get,
+        has: has
     };
     if (extraFunctions) {
         for (var name in extraFunctions) {
@@ -71,7 +82,11 @@ module.exports = function compileExpression(expression, extraFunctions /* option
     function unknown(funcName) {
         throw 'Unknown function: ' + funcName + '()';
     }
+    
+    if (source) return js.join('');
+    
     var func = new Function('functions', 'data', 'unknown', js.join(''));
+    
     return function(data) {
         return func(functions, data, unknown);
     };

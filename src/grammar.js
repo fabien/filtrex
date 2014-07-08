@@ -12,6 +12,7 @@ var grammar = {
     // Lexical tokens
     lex: {
         rules: [
+            ['\\/([^\\\\]|\\\\.)*?\\/i?', 'return "REGEXP";'],
             ['\\*', 'return "*";'],
             ['\\/', 'return "/";'],
             ['-'  , 'return "-";'],
@@ -29,17 +30,20 @@ var grammar = {
             ['>', 'return ">";'],
             ['\\?', 'return "?";'],
             ['\\:', 'return ":";'],
+            ['~', 'return "match";'],
             ['and[^\\w]', 'return "and";'],
             ['or[^\\w]' , 'return "or";'],
             ['not[^\\w]', 'return "not";'],
             ['in[^\\w]', 'return "in";'],
+            ['has[^\\w]', 'return "has";'],
+            ['match[^\\w]', 'return "match";'],
             ['\\s+',  ''], // skip whitespace
             ['[0-9]+(?:\\.[0-9]+)?\\b', 'return "NUMBER";'], // 212.321
             ['[a-zA-Z][\\[\\]\\.a-zA-Z0-9_]*', 'return "SYMBOL";'], // some.Symbol22
             ['"(?:[^"])*"', 'yytext = yytext.substr(1, yyleng-2); return "STRING";'], // "foo"
             
             // End
-            ['$', 'return "EOF";'],
+            ['$', 'return "EOF";']
         ]
     },
     // Operator precedence - lowest precedence first.
@@ -58,7 +62,7 @@ var grammar = {
         ['left', '*', '/', '%'],
         ['left', '^'],
         ['left', 'not'],
-        ['left', 'UMINUS'],
+        ['left', 'UMINUS']
     ],
     // Grammar
     bnf: {
@@ -87,19 +91,23 @@ var grammar = {
             ['( e )'  , code([2])],
             ['NUMBER' , code([1])],
             ['STRING' , code(['"', 1, '"'])],
+            ['REGEXP' , code(['"', 1, '"'])],
             ['SYMBOL' , code(['functions.get(data, "', 1, '") || data["', 1, '"]'])],
             ['SYMBOL ( argsList )', code(['(functions.hasOwnProperty("', 1, '") ? functions.', 1, '(', 3, ') : unknown("', 1, '"))'])],
             ['e in ( inSet )', code([1, ' in (function(o) { ', 4, 'return o; })({})'])],
             ['e not in ( inSet )', code(['!(', 1, ' in (function(o) { ', 5, 'return o; })({}))'])],
+            ['e has e', code(['functions.has(', 1, ', ', 3, ')'])],
+            ['e match REGEXP', code(['(', 3, ').test((', 1, ' || "").toString())'])],
+            ['e not match REGEXP', code(['!(', 3, ').test((', 1, ' || "").toString())'])]
         ],
         argsList: [
             ['e', code([1], true)],
-            ['argsList , e', code([1, ',', 3], true)],
+            ['argsList , e', code([1, ',', 3], true)]
         ],
         inSet: [
             ['e', code(['o[', 1, '] = true; '], true)],
-            ['inSet , e', code([1, 'o[', 3, '] = true; '], true)],
-        ],
+            ['inSet , e', code([1, 'o[', 3, '] = true; '], true)]
+        ]
     }
 };
 
