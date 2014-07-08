@@ -9,6 +9,29 @@
  * -Joe Walnes
  */
 module.exports = function compileExpression(expression, extraFunctions /* optional */) {
+    
+    var get = function(o, s) {
+        if (typeof o !== 'object') return o;
+        var args = Array.prototype.slice.call(arguments, 1);
+        if (args.length > 1) {
+            var a = args;
+        } else if (typeof s === 'string') {
+            s = s.replace(/\[(\w+)\]/g, '.$1');  // convert indexes to properties
+            s = s.replace(/^\./, ''); // strip leading dot
+            var a = s.split('.');
+        } else {
+            var a = [s];
+        }
+        while (a.length) {
+            var n = a.shift();
+            if (n in o) {
+                o = o[n];
+            } else {
+                return;
+            }
+        }
+        return o;
+    };
 
     var parser = require('./parser');
 
@@ -22,6 +45,7 @@ module.exports = function compileExpression(expression, extraFunctions /* option
         random: Math.random,
         round: Math.round,
         sqrt: Math.sqrt,
+        get: get
     };
     if (extraFunctions) {
         for (var name in extraFunctions) {
@@ -31,7 +55,7 @@ module.exports = function compileExpression(expression, extraFunctions /* option
         }
     }
     var tree = parser.parse(expression);
-
+    
     var js = [];
     js.push('return ');
     function toJs(node) {
@@ -43,12 +67,12 @@ module.exports = function compileExpression(expression, extraFunctions /* option
     }
     tree.forEach(toJs);
     js.push(';');
-
+    
     function unknown(funcName) {
         throw 'Unknown function: ' + funcName + '()';
     }
     var func = new Function('functions', 'data', 'unknown', js.join(''));
-     return function(data) {
+    return function(data) {
         return func(functions, data, unknown);
     };
 }

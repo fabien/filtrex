@@ -45,6 +45,32 @@ describe('filtrex', function() {
         expect(compileExpression('max(2, 5, 6, 1, 9, 12)')()).to.equal(12);
     });
 
+    it('evaluates nested properties', function() {
+        var vars = { foo: { bar: { baz: 10 }, things: ['one', 'two', 'three'] } };
+        expect(compileExpression('(foo.bar.baz + 6) / 2')(vars)).to.equal(8);
+        expect(compileExpression('foo.bar.baz + foo.things.2')(vars)).to.equal('10three');
+        expect(compileExpression('foo.things.0 + " + " + foo.things[1]')(vars)).to.equal('one + two');
+        expect(compileExpression('foo.bar.unknown')(vars)).to.be.undefined;
+        expect(compileExpression('foo.unknown')(vars)).to.be.undefined;
+        expect(compileExpression('foo[bar]')(vars)).to.eql({ baz: 10 });
+        expect(compileExpression('foo[bar][baz]')(vars)).to.equal(10);
+        expect(compileExpression('foo.things[2]')(vars)).to.equal('three');
+        expect(compileExpression('foo.things.length')(vars)).to.equal(3);
+        expect(compileExpression('foo.fn(foo)').bind(null, vars)).to.throw;
+    });
+    
+    it('evaluates nested properties using get', function() {
+        var vars = { key: 'bar', idx: 2, foo: { bar: { baz: 10 }, things: ['one', 'two', 'three'] } };
+        expect(compileExpression('get(foo, key)')(vars)).to.eql({ baz: 10 });
+        expect(compileExpression('get(foo, key, "baz") * 2')(vars)).to.eql(20);
+        expect(compileExpression('get(foo.things, idx)')(vars)).to.equal('three');
+        expect(compileExpression('get(foo.things, 1 + 1)')(vars)).to.equal('three');
+        expect(compileExpression('get(foo.things, max(2))')(vars)).to.equal('three');
+        expect(compileExpression('get(foo.things, 0 or 1)')(vars)).to.equal('two');
+        expect(compileExpression('get(foo, "things", 1 + 1)')(vars)).to.eql('three');
+        expect(compileExpression('get(foo, "things", foo.things.length - 1)')(vars)).to.eql('three');
+    });
+
     it('evaluates boolean logic', function() {
         expect(compileExpression('0 and 0')()).to.equal(0);
         expect(compileExpression('0 and 1')()).to.equal(0);

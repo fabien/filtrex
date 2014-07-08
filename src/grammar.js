@@ -33,12 +33,11 @@ var grammar = {
             ['or[^\\w]' , 'return "or";'],
             ['not[^\\w]', 'return "not";'],
             ['in[^\\w]', 'return "in";'],
-
             ['\\s+',  ''], // skip whitespace
             ['[0-9]+(?:\\.[0-9]+)?\\b', 'return "NUMBER";'], // 212.321
-            ['[a-zA-Z][\\.a-zA-Z0-9_]*', 'return "SYMBOL";'], // some.Symbol22
+            ['[a-zA-Z][\\[\\]\\.a-zA-Z0-9_]*', 'return "SYMBOL";'], // some.Symbol22
             ['"(?:[^"])*"', 'yytext = yytext.substr(1, yyleng-2); return "STRING";'], // "foo"
-
+            
             // End
             ['$', 'return "EOF";'],
         ]
@@ -84,10 +83,11 @@ var grammar = {
             ['e > e'  , code(['Number(', 1, '> ', 3, ')'])],
             ['e >= e' , code(['Number(', 1, '>=', 3, ')'])],
             ['e ? e : e', code([1, '?', 3, ':', 5])],
+            ['[ e ]'  , code([2])],
             ['( e )'  , code([2])],
             ['NUMBER' , code([1])],
             ['STRING' , code(['"', 1, '"'])],
-            ['SYMBOL' , code(['data["', 1, '"]'])],
+            ['SYMBOL' , code(['functions.get(data, "', 1, '") || data["', 1, '"]'])],
             ['SYMBOL ( argsList )', code(['(functions.hasOwnProperty("', 1, '") ? functions.', 1, '(', 3, ') : unknown("', 1, '"))'])],
             ['e in ( inSet )', code([1, ' in (function(o) { ', 4, 'return o; })({})'])],
             ['e not in ( inSet )', code(['!(', 1, ' in (function(o) { ', 5, 'return o; })({}))'])],
